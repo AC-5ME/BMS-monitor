@@ -22,7 +22,7 @@ Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
 // Singleton instance of the radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
-// Blinky on receipt
+// Blink on receipt
 #define LED 13
 
 void setup() {
@@ -81,7 +81,7 @@ void setup() {
   // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then
   // you can set transmitter powers from 5 to 23 dBm:
 
-  rf95.setTxPower(23, false);
+  rf95.setTxPower(10, false);
 
 }
 
@@ -92,17 +92,15 @@ void loop()
     // Should be a message for us now
     uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
     uint8_t len = sizeof(buf);
-
+    
     if (rf95.recv(buf, &len))
     {
-      digitalWrite(LED, HIGH);
-      RH_RF95::printBuffer("Received: ", buf, len);
+      buf[len] = 0;
       display.setCursor(36, 0);
       display.print((char*)buf);
       display.display();
 
-      tone(5,200);
-      delay(500);
+      tone(5, 200);     //Not working
     }
   }
 }

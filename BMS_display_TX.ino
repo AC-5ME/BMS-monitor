@@ -73,7 +73,7 @@ void Print_Voltage() {      //Reset screen and print pack voltage
   if (Serial.find(": ")) {
     long packVolts =  Serial.parseInt(SKIP_NONE, '.');
     float printVolts = (packVolts / 100.0);
-    
+
     lcd.clear();
     lcd.print ("Pack: ");
     lcd.setCursor (0, 1);
@@ -85,7 +85,7 @@ void Print_Voltage() {      //Reset screen and print pack voltage
 
     lcd.setCursor (6, 0);
     lcd.print (printVolts);
-    lcd.setCursor (12, 0);
+    lcd.setCursor (13, 0);
     lcd.print ("V");
 
     char voltPacket[7] = "------";
@@ -99,11 +99,17 @@ void Print_Mean() {     //Print cell volt mean
 
   if (Serial.find(": ")) {
     long packMean =  Serial.parseInt(SKIP_NONE, '.');
+    float printMean = (packMean / 100.0);
 
     lcd.setCursor (11, 1);
-    lcd.print ((packMean / 100.0));
-    lcd.setCursor (15, 1);
+    lcd.print (printMean);
+    lcd.setCursor (16, 1);
     lcd.print ("V");
+
+    char meanPacket[5] = "-----";
+    dtostrf(printMean, 4, 2, meanPacket);
+    //rf95.send((uint8_t *)meanPacket, 5);
+    //rf95.waitPacketSent();
   }
 }
 
@@ -111,11 +117,17 @@ void Print_Dev() {      //Print cell volt standard deviation
 
   if (Serial.find(": ")) {
     long packDev =  Serial.parseInt(SKIP_NONE, '.');
+    float printDev = (packDev / 1000.0);
 
     lcd.setCursor (14, 2);
-    lcd.print ((packDev / 1000.0));
-    lcd.setCursor (18, 2);
+    lcd.print (printDev);
+    lcd.setCursor (19, 2);
     lcd.print ("V");
+
+    char devPacket[5] = "-----";
+    dtostrf(printDev, 4, 2, devPacket);
+    //rf95.send((uint8_t *)devPacket, 5);
+    //rf95.waitPacketSent();
   }
 }
 

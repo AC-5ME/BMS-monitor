@@ -92,13 +92,17 @@ void loop()
     // Should be a message for us now
     uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
     uint8_t len = sizeof(buf);
-    
+
     if (rf95.recv(buf, &len))
     {
+      digitalWrite(LED, HIGH);
       buf[len] = 0;
       display.setCursor(36, 0);
       display.print((char*)buf);
+      display.setCursor(80, 0);
+      display.print("V");
       display.display();
+      digitalWrite(LED, LOW);
 
       tone(5, 200);     //Not working
     }

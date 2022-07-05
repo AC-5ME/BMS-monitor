@@ -17,6 +17,7 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 void setup() {
   Serial.begin(9600);
+  delay(250); // wait for the LED to power up
 
   lcd.init();
   lcd.backlight();
@@ -39,16 +40,18 @@ void setup() {
   delay(10);
 
   while (!rf95.init()) {
-    lcd.setCursor (5, 3);
+    lcd.setCursor (8, 3);
     lcd.print("                       ");
-    lcd.print("LoRa radio init failed!");
+    lcd.setCursor (8, 3);
+    lcd.print("LoRa failed!");
     while (1);
   }
 
   // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM
   if (!rf95.setFrequency(RF95_FREQ)) {
-    lcd.setCursor (5, 3);
+    lcd.setCursor (8, 3);
     lcd.print("                        ");
+    lcd.setCursor (8, 3);
     lcd.print("setFrequency fail!");
     while (1);
   }
@@ -58,7 +61,7 @@ void setup() {
   // The default transmitter power is 13dBm, using PA_BOOST.
   // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then
   // you can set transmitter powers from 5 to 23 dBm:
-  rf95.setTxPower(23, false);
+  rf95.setTxPower(10, false);
 
   int16_t packetnum = 0;  // packet counter, we increment per xmission
 
@@ -69,7 +72,8 @@ void Print_Voltage() {      //Reset screen and print pack voltage
 
   if (Serial.find(": ")) {
     long packVolts =  Serial.parseInt(SKIP_NONE, '.');
-
+    float printVolts = (packVolts / 100.0);
+    
     lcd.clear();
     lcd.print ("Pack: ");
     lcd.setCursor (0, 1);
@@ -80,12 +84,12 @@ void Print_Voltage() {      //Reset screen and print pack voltage
     lcd.print ("BMS: ---");
 
     lcd.setCursor (6, 0);
-    lcd.print ((packVolts / 100.0));
+    lcd.print (printVolts);
     lcd.setCursor (12, 0);
     lcd.print ("V");
 
     char voltPacket[7] = "------";
-    voltPacket[6] = 0;
+    dtostrf(printVolts, 5, 2, voltPacket);
     rf95.send((uint8_t *)voltPacket, 7);
     rf95.waitPacketSent();
   }

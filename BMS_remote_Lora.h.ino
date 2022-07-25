@@ -21,26 +21,16 @@ void setup() {
   display.clearDisplay();
   display.display();
   display.setRotation(1);
-  display.setTextSize(1);
+  display.setTextSize(2);
   display.setTextColor(SH110X_WHITE);
   display.setTextColor(1, 0);
   display.setCursor(0, 0);
-  display.print("Pack: ");
-  display.setCursor(0, 10);
-  display.print("Mean Cell: ");
-  display.setCursor(0, 20);
-  display.print("Cell std dev: ");
-  display.setCursor(0, 30);
-  display.print("Alerts: ---");
-  display.setCursor(0, 30);
-  display.display();
-  tone(5, 4000, 1000);
 
   if (!LoRa.begin(915E6)) {
-    display.setCursor(75, 30);
-    display.println("LoRa failed!");
+    display.setCursor(0, 0);
+    display.print("LoRa failed!");
     display.display();
-    tone(5, 4000, 1000);      //Pin, Freq, Duration
+    tone(5, 4000, 5000);      //Pin, Freq, Duration
     while (1);
   }
 }
@@ -59,28 +49,31 @@ void loop() {
   Serial.println(measuredVbat);
 
   if (batPercent > 100) {
-    display.setCursor(0, 55);     //(Row, Column)
-    display.print("Remote: Charging!");
+    display.setCursor(0, 48);     //(Row, Column)
+    display.print("Charging?");
     display.display();
 
   } else {
-    display.setCursor(0, 55);     //(Row, Column)
-    display.print("Remote: ");
+    display.setCursor(0, 48);     //(Row, Column)
+    display.print("Batt: ");
     display.print(batPercent);
-    display.print("%        ");
+    display.print("%          ");
     display.display();
   }
 
   int packetSize = LoRa.parsePacket();
-  if (packetSize) {     // received a packet
+  if (packetSize) {     // received a packet?
 
     Serial.println("Received packet: ");
     display.setCursor(0, 0);
 
     while (LoRa.available()) {
       display.print((char)LoRa.read());
+      display.print("   ");
+      display.print(" V");
       display.display();
-      tone(5, 200, 1000);
-    }
+     }
+      display.print("      ");
+      display.display();
   }
 }

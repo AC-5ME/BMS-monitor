@@ -12,9 +12,10 @@ void setup() {
 
   Serial.begin(9600);
   LoRa.setPins(4, 2, 3);      //CS, RST, INT
-  LoRa.setTxPower(5);
-  delay(250); // wait for the LED to power up
+  //LoRa.setTxPower(5);     //not working
+  //LoRa.setSyncWord(0xBB);     //not working
 
+  delay(250); // wait for the LED to power up
   lcd.init();
   lcd.backlight();
   lcd.setCursor (0, 0);      // Set the cursor on the X column and Y row
@@ -55,7 +56,9 @@ void Print_Voltage() {      //Print/send pack voltage
     LoRa.beginPacket();
     LoRa.print("Pack: ");
     LoRa.print(printVolts);
+    LoRa.print("V      ");
     LoRa.endPacket();
+    delay(1000);
   }
 }
 
@@ -70,10 +73,12 @@ void Print_Mean() {     //Print cell volt mean
     lcd.setCursor (16, 1);
     lcd.print ("V");
 
-    char meanPacket[5] = "-----";
-    dtostrf(printMean, 4, 2, meanPacket);
-    //rf95.send((uint8_t *)meanPacket, 5);
-    //rf95.waitPacketSent();
+    LoRa.beginPacket();
+    LoRa.print("Cell mean: ");
+    LoRa.print(printMean);
+    LoRa.print("V        ");
+    LoRa.endPacket();
+    delay(1000);
   }
 }
 
@@ -88,20 +93,27 @@ void Print_Dev() {      //Print cell volt standard deviation
     lcd.setCursor (19, 2);
     lcd.print ("V");
 
-    char devPacket[5] = "-----";
-    dtostrf(printDev, 4, 2, devPacket);
-    //rf95.send((uint8_t *)devPacket, 5);
-    //rf95.waitPacketSent();
+    LoRa.beginPacket();
+    LoRa.print("Cell std dev: ");
+    LoRa.print(printDev);
+    LoRa.print("V        ");
+    LoRa.endPacket();
+    delay(1000);
   }
 }
 
 void Print_Alerts() {     //Print Alerts
+  LoRa.beginPacket();
+  LoRa.print("Alerts: ");
   lcd.setCursor (5, 3);
   for (int i = 1; i <= 11; i++) {
     char c = Serial.read ();
     lcd.print(c);
+    LoRa.print(c);
   }
-  delay (5000);
+
+  LoRa.endPacket();
+  delay(1000);
 }
 
 void Print_Uptime() {     //Print charge time elapsed
@@ -135,7 +147,15 @@ void Print_Uptime() {     //Print charge time elapsed
   lcd.print ("smokeVal: ");
   lcd.setCursor (11, 3);
   lcd.print (smokeVal);
-  delay (1000);
+
+  LoRa.beginPacket();
+  LoRa.print("Charging: ");
+  LoRa.print(chargeHours);
+  LoRa.print(" H  ");
+  LoRa.print(chargeMins);
+  LoRa.print(" M      ");
+  LoRa.endPacket();
+  delay(1000);
 }
 
 void PrintTH_1_2() {      //Print temps #1/2
@@ -154,6 +174,17 @@ void PrintTH_1_2() {      //Print temps #1/2
   lcd.print (TH1);
   lcd.setCursor (6, 2);
   lcd.print (TH2);
+
+  LoRa.beginPacket();
+  LoRa.print("TH1: ");
+  LoRa.print(TH1);
+  LoRa.endPacket();
+  //delay(1000);
+  LoRa.beginPacket();
+  LoRa.print("TH2: ");
+  LoRa.print(TH2);
+  LoRa.endPacket();
+  //delay(1000);
 }
 
 void PrintTH_3_4() {      //Print temps #3/4
@@ -170,18 +201,36 @@ void PrintTH_3_4() {      //Print temps #3/4
   lcd.print (TH3);
   lcd.setCursor (17, 2);
   lcd.print (TH4);
-  delay (2000);
+  //delay (2000);
+
+  LoRa.beginPacket();
+  LoRa.print("TH3: ");
+  LoRa.print(TH3);
+  LoRa.endPacket();
+  //delay(1000);
+  LoRa.beginPacket();
+  LoRa.print("TH4: ");
+  LoRa.print(TH4);
+  LoRa.endPacket();
+  //delay(1000);
 }
 
 void smokeAlarm() {
   int analogPin = A0;     //MQ-135 smoke sensor
   int val = 0;      // 0-1035 smoke values
   smokeVal = analogRead(analogPin);  // read the input pin
+
+  /*LoRa.beginPacket();
+    LoRa.print("smoke: ");
+    LoRa.print(smokeVal);
+    LoRa.endPacket();
+    delay(1000);
+  */
 }
 
 void loop() {
 
-  Serial.println ("show");
+  //Serial.println ("show");
 
   if (Serial.available() > 0) {
 
@@ -201,7 +250,7 @@ void loop() {
       Print_Uptime();
   }
 
-  Serial.println ("sh th");
+  //Serial.println ("sh th");
 
   if (Serial.available() > 0) {
 

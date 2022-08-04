@@ -1,26 +1,32 @@
-
+#include <LoRa.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <LiquidCrystal_I2C.h>
 LiquidCrystal_I2C lcd(0x27, 20, 4);
-#include <RH_RF95.h>
 
-#define RFM95_CS 4
-#define RFM95_RST 2
-#define RFM95_INT 3
-
-// Change to 434.0 or other frequency, must match RX's freq!
-#define RF95_FREQ 915.0
-
-// Singleton instance of the radio driver
-RH_RF95 rf95(RFM95_CS, RFM95_INT);
+long packVolts = 0;
+long packMean = 0;
+long packDev = 0;
+int TH1 = 0;
+int TH2 = 0;
+int TH3 = 0;
+int TH4 = 0;
+int chargeHours = 0;
+int chargeMins = 0;
+int chargeSecs = 0;
+int analogPin = A0;     //MQ-135 smoke sensor
 
 void setup() {
   Serial.begin(9600);
-  delay(250); // wait for the LED to power up
-
   lcd.init();
   lcd.backlight();
+
+  LoRa.setPins(4, 2, 3);      //CS, RST, INT
+  //LoRa.setTxPower(5);     //not working
+  //LoRa.setSyncWord(0xBB);     //not working
+
+  //Serial.setTimeout(2000);      //Timeout for Serial.find (1000ms default)
+
   lcd.setCursor (0, 0);      // Set the cursor on the X column and Y row
   lcd.print ("Pack: ");
   lcd.setCursor (0, 1);
@@ -28,51 +34,17 @@ void setup() {
   lcd.setCursor (0, 2);
   lcd.print ("Cell std dev: ");
   lcd.setCursor (0, 3);
-  lcd.print ("Alerts: ---");
+  lcd.print ("Msg: ---");
 
-  pinMode(RFM95_RST, OUTPUT);
-  digitalWrite(RFM95_RST, HIGH);
-
-  // manual reset
-  digitalWrite(RFM95_RST, LOW);
-  delay(10);
-  digitalWrite(RFM95_RST, HIGH);
-  delay(10);
-
-  while (!rf95.init()) {
-    lcd.setCursor (8, 3);
-    lcd.print("                       ");
-    lcd.setCursor (8, 3);
-    lcd.print("LoRa failed!");
-    while (1);
+  if (!LoRa.begin(915E6)) {
+    lcd.setCursor (5, 3);
+    lcd.print ("LoRa failed!");
   }
-
-  // Defaults after init are 434.0MHz, modulation GFSK_Rb250Fd250, +13dbM
-  if (!rf95.setFrequency(RF95_FREQ)) {
-    lcd.setCursor (8, 3);
-    lcd.print("                        ");
-    lcd.setCursor (8, 3);
-    lcd.print("setFrequency fail!");
-    while (1);
-  }
-
-  // Defaults after init are 434.0MHz, 13dBm, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on
-
-  // The default transmitter power is 13dBm, using PA_BOOST.
-  // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then
-  // you can set transmitter powers from 5 to 23 dBm:
-  rf95.setTxPower(10, false);
-
-  int16_t packetnum = 0;  // packet counter, we increment per xmission
-
-  //Serial.setTimeout(2000);      //Timeout for Serial.find (1000ms default)
 }
 
 void Print_Voltage() {      //Reset screen and print pack voltage
-
   if (Serial.find(": ")) {
-    long packVolts =  Serial.parseInt(SKIP_NONE, '.');
-    float printVolts = (packVolts / 100.0);
+    packVolts =  Serial.parseInt(SKIP_NONE, '.');
 
     lcd.clear();
     lcd.print ("Pack: ");
@@ -81,53 +53,35 @@ void Print_Voltage() {      //Reset screen and print pack voltage
     lcd.setCursor (0, 2);
     lcd.print ("Cell std dev: ");
     lcd.setCursor (0, 3);
-    lcd.print ("BMS: ---");
+    lcd.print ("Msg: ---");
 
     lcd.setCursor (6, 0);
-    lcd.print (printVolts);
-    lcd.setCursor (13, 0);
+    lcd.print ((packVolts / 100.0));
+    lcd.setCursor (12, 0);
     lcd.print ("V");
-
-    char voltPacket[7] = "------";
-    dtostrf(printVolts, 5, 2, voltPacket);
-    rf95.send((uint8_t *)voltPacket, 7);
-    rf95.waitPacketSent();
   }
 }
 
 void Print_Mean() {     //Print cell volt mean
-
   if (Serial.find(": ")) {
-    long packMean =  Serial.parseInt(SKIP_NONE, '.');
-    float printMean = (packMean / 100.0);
+    packMean =  Serial.parseInt(SKIP_NONE, '.');
 
     lcd.setCursor (11, 1);
-    lcd.print (printMean);
-    lcd.setCursor (16, 1);
+    lcd.print ((packMean / 100.0));
+    lcd.setCursor (15, 1);
     lcd.print ("V");
-
-    char meanPacket[5] = "-----";
-    dtostrf(printMean, 4, 2, meanPacket);
-    //rf95.send((uint8_t *)meanPacket, 5);
-    //rf95.waitPacketSent();
   }
 }
 
 void Print_Dev() {      //Print cell volt standard deviation
 
   if (Serial.find(": ")) {
-    long packDev =  Serial.parseInt(SKIP_NONE, '.');
-    float printDev = (packDev / 1000.0);
+    packDev =  Serial.parseInt(SKIP_NONE, '.');
 
     lcd.setCursor (14, 2);
-    lcd.print (printDev);
-    lcd.setCursor (19, 2);
+    lcd.print ((packDev / 1000.0));
+    lcd.setCursor (18, 2);
     lcd.print ("V");
-
-    char devPacket[5] = "-----";
-    dtostrf(printDev, 4, 2, devPacket);
-    //rf95.send((uint8_t *)devPacket, 5);
-    //rf95.waitPacketSent();
   }
 }
 
@@ -137,25 +91,19 @@ void Print_Alerts() {     //Print Alerts
     char c = Serial.read ();
     lcd.print(c);
   }
-  delay (5000);
 }
 
 void Print_Uptime() {     //Print charge time elapsed
-  int chargeHours;
-  int chargeMins;
-  int chargeSecs;
-
   if (Serial.find(": ")) {
     chargeHours =  Serial.parseInt();
   }
-
   if (Serial.find(", ")) {
     chargeMins =  Serial.parseInt();
   }
-
   if (Serial.find(", ")) {
     chargeSecs =  Serial.parseInt();
   }
+  delay (2000);
 
   lcd.clear();
   lcd.print ("     -Charging-");
@@ -171,13 +119,9 @@ void Print_Uptime() {     //Print charge time elapsed
   lcd.print ("Seconds: ");
   lcd.setCursor (9, 3);
   lcd.print (chargeSecs);
-  delay (2000);
 }
 
 void PrintTH_1_2() {      //Print temps #1/2
-  int TH1;
-  int TH2;
-
   lcd.clear();
   lcd.print ("  -Pack Temps (C)-");
   lcd.setCursor (0, 1);
@@ -193,9 +137,6 @@ void PrintTH_1_2() {      //Print temps #1/2
 }
 
 void PrintTH_3_4() {      //Print temps #3/4
-  int TH3;
-  int TH4;
-
   lcd.setCursor (10, 1);
   lcd.print ("TH 3: ");
   lcd.setCursor (10, 2);
@@ -206,51 +147,97 @@ void PrintTH_3_4() {      //Print temps #3/4
   lcd.print (TH3);
   lcd.setCursor (17, 2);
   lcd.print (TH4);
-  delay (2000);
 }
 
-void smokeAlarm() {
-  int analogPin = A0;     //MQ-135 smoke sensor
-  int val = 0;      // 0-1035 smoke values
+void SmokeAlarm() {
+  int SmokeVal = analogRead(analogPin);     // 0-1035 smoke values
 
-  val = analogRead(analogPin);  // read the input pin
-  Serial.println("Smoke Sensor:");
-  Serial.println(val);          // debug value
+  LoRa.print ("Smoke: ");
+  LoRa.print (SmokeVal);
+  LoRa.println (" (0-1035)      ");
+  LoRa.endPacket();
+}
+
+void SendValues() {
+  LoRa.beginPacket();
+  LoRa.print ("Pack: ");
+  LoRa.print ((packVolts / 100.0));
+  LoRa.println ("V      ");
+
+  LoRa.print ("Mean cell: ");
+  LoRa.print ((packMean / 100.0));
+  LoRa.println ("V   ");
+
+  LoRa.print ("Cell std dev: ");
+  LoRa.print ((packDev / 1000.0));
+  LoRa.println ("V");
+  LoRa.print ("                 ");
+  LoRa.endPacket();
+}
+
+void SendTH() {
+  LoRa.beginPacket();
+  LoRa.print ("TH1: ");
+  LoRa.print (TH1);
+  LoRa.println ("C             ");
+  LoRa.print ("TH2: ");
+  LoRa.print (TH2);
+  LoRa.println ("C             ");
+  LoRa.print ("TH3: ");
+  LoRa.print (TH3);
+  LoRa.println ("C             ");
+  LoRa.print ("TH4: ");
+  LoRa.print (TH4);
+  LoRa.println ("C             ");
+  LoRa.endPacket();
+}
+
+void SendTime() {
+  LoRa.beginPacket();
+  LoRa.println ("Charging:          ");
+  LoRa.print (chargeHours);
+  LoRa.println (" H                 ");
+  LoRa.print (chargeMins);
+  LoRa.println (" M                 ");
+  LoRa.print (chargeSecs);
+  LoRa.println (" S                 ");
+  LoRa.endPacket();
 }
 
 void loop() {
-
-  //Serial.println ("show");
+  Serial.println ("show");
 
   if (Serial.available() > 0) {
-
     if (Serial.find("voltage"))
       Print_Voltage();
-
     if (Serial.find("mean   "))
       Print_Mean();
-
     if (Serial.find("std dev"))
       Print_Dev();
-
     if (Serial.find("alerts   : "))
       Print_Alerts();
-
     if (Serial.find("uptime   "))
       Print_Uptime();
   }
 
-  //Serial.println ("sh th");
+  SendValues();
+  delay (2000);
+
+  SendTime();
+  delay (2000);
+
+  Serial.println ("sh th");
 
   if (Serial.available() > 0) {
-
     if (Serial.find("2 | "))
       PrintTH_1_2();
-
     if (Serial.find("4 | "))
       PrintTH_3_4();
-
-    smokeAlarm();
-
   }
+
+  SendTH();
+  delay (2000);
+
+  SmokeAlarm();
+  delay (2000);
 }

@@ -12,11 +12,16 @@ Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
 #define VBATPIN A9
 #define PIEZO_PIN 5 // Piezo speaker/buzzer pin
 
+enum SERIAL_REQUEST {     //Sent msg states
+  S,      //Smoke alarm
+};
+
+
+
 void setup() {
   LoRa.setPins(8, 4, 7);      //CS, RST, INT
-  //LoRa.setSyncWord(0xBB);
+  //LoRa.setSyncWord(0xBB);     //Not working
 
-  delay(250); // wait for the OLED to power up
   display.begin(0x3C, true); // Address 0x3C default
   display.clearDisplay();
   display.display();
@@ -34,8 +39,16 @@ void setup() {
     while (1);
   }
 }
+void smoke() {
+  display.setCursor(0, 0);
+  display.print("Smoke!            ");
+  display.display();
+  tone(5, 4000, 1000);      //Pin, Freq, Duration
+  delay(1000);
+}
 
 void loop() {
+  int rssi = LoRa.rssi();
 
   const int batMin = 3.2;    //Remote battery % conversion
   const int batMax = 4.3;
@@ -46,18 +59,24 @@ void loop() {
   measuredVbat /= 1024; // convert to voltage
   int batPercent = ((measuredVbat - batMin) / (span) * 100);
 
+  display.setCursor(0, 40);
+  display.print("RSSI: ");
+  display.print(rssi);
+  display.print(" dBm ");
+  display.display();
+
   if (batPercent > 100) {
     display.setCursor(0, 48);     //(Row, Column)
     display.print("Remote charging?       ");
     display.display();
 
   } else {
-    display.setCursor(0, 48);     //(Row, Column)
+    display.setCursor(0, 48);
     display.print("Remote: ");
     display.print(batPercent);
     display.print("%  ");
     display.print(measuredVbat);
-    display.print(" V ");
+    display.print("V ");
     display.display();
   }
 
@@ -67,6 +86,12 @@ void loop() {
     display.setCursor(0, 0);
 
     while (LoRa.available()) {
+      /*switch ((char)LoRa.read()) {
+        case S: {
+            smoke();
+          } break;
+      */
+
       display.print((char)LoRa.read());
       display.display();
     }

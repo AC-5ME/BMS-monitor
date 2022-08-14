@@ -4,45 +4,23 @@
 #include <LiquidCrystal_I2C.h>
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
-long packVolts = 0;
-long packMean = 0;
-long packDev = 0;
-int TH1 = 0;
-int TH2 = 0;
-int TH3 = 0;
-int TH4 = 0;
-int chargeHours = 0;
-int chargeMins = 0;
-int chargeSecs = 0;
+/*
+  long packVolts = 0;
+  long packMean = 0;
+  long packDev = 0;
+  int TH1 = 0;
+  int TH2 = 0;
+  int TH3 = 0;
+  int TH4 = 0;
+  int chargeHours = 0;
+  int chargeMins = 0;
+  int chargeSecs = 0;
+*/
+
 int analogPin = A0;     //MQ-135 smoke sensor
 
-void setup() {
-  Serial.begin(9600);
-  lcd.init();
-  lcd.backlight();
 
-  LoRa.setPins(4, 2, 3);      //CS, RST, INT
-  //LoRa.setTxPower(5);     //not working
-  //LoRa.setSyncWord(0xBB);     //not working
-
-  //Serial.setTimeout(2000);      //Timeout for Serial.find (1000ms default)
-
-  lcd.setCursor (0, 0);      // Set the cursor on the X column and Y row
-  lcd.print ("Pack: ");
-  lcd.setCursor (0, 1);
-  lcd.print ("Mean cell: ");
-  lcd.setCursor (0, 2);
-  lcd.print ("Cell std dev: ");
-  lcd.setCursor (0, 3);
-  lcd.print ("Msg: ---");
-
-  if (!LoRa.begin(915E6)) {
-    lcd.setCursor (5, 3);
-    lcd.print ("LoRa failed!");
-  }
-}
-
-void Print_Voltage() {      //Reset screen and print pack voltage
+void Print_Voltage(long& packVolts) {      //Reset screen and print pack voltage
   if (Serial.find(": ")) {
     packVolts =  Serial.parseInt(SKIP_NONE, '.');
 
@@ -62,7 +40,7 @@ void Print_Voltage() {      //Reset screen and print pack voltage
   }
 }
 
-void Print_Mean() {     //Print cell volt mean
+void Print_Mean(long& packMean) {     //Print cell volt mean
   if (Serial.find(": ")) {
     packMean =  Serial.parseInt(SKIP_NONE, '.');
 
@@ -73,7 +51,7 @@ void Print_Mean() {     //Print cell volt mean
   }
 }
 
-void Print_Dev() {      //Print cell volt standard deviation
+void Print_Dev(long& packDev) {      //Print cell volt standard deviation
 
   if (Serial.find(": ")) {
     packDev =  Serial.parseInt(SKIP_NONE, '.');
@@ -93,7 +71,7 @@ void Print_Alerts() {     //Print Alerts
   }
 }
 
-void Print_Uptime() {     //Print charge time elapsed
+void Print_Uptime(int& chargeHours, int& chargeMins, int& chargeSecs) {     //Print charge time elapsed
   if (Serial.find(": ")) {
     chargeHours =  Serial.parseInt();
   }
@@ -121,7 +99,7 @@ void Print_Uptime() {     //Print charge time elapsed
   lcd.print (chargeSecs);
 }
 
-void PrintTH_1_2() {      //Print temps #1/2
+void PrintTH_1_2(int& TH1, int& TH2) {      //Print temps #1/2
   lcd.clear();
   lcd.print ("  -Pack Temps (C)-");
   lcd.setCursor (0, 1);
@@ -136,7 +114,7 @@ void PrintTH_1_2() {      //Print temps #1/2
   lcd.print (TH2);
 }
 
-void PrintTH_3_4() {      //Print temps #3/4
+void PrintTH_3_4(int& TH3, int& TH4) {      //Print temps #3/4
   lcd.setCursor (10, 1);
   lcd.print ("TH 3: ");
   lcd.setCursor (10, 2);
@@ -149,17 +127,9 @@ void PrintTH_3_4() {      //Print temps #3/4
   lcd.print (TH4);
 }
 
-void SmokeAlarm() {
-  int SmokeVal = analogRead(analogPin);     // 0-1035 smoke values
-
-  LoRa.print ("Smoke: ");
-  LoRa.print (SmokeVal);
-  LoRa.println (" (0-1035)      ");
-  LoRa.endPacket();
-}
-
-void SendValues() {
+void SendValues(long packVolts, long packMean, long packDev) {
   LoRa.beginPacket();
+  LoRa.print ("");
   LoRa.print ("Pack: ");
   LoRa.print ((packVolts / 100.0));
   LoRa.println ("V      ");
@@ -175,7 +145,7 @@ void SendValues() {
   LoRa.endPacket();
 }
 
-void SendTH() {
+void SendTH(int TH1, int TH2, int TH3, int TH4) {
   LoRa.beginPacket();
   LoRa.print ("TH1: ");
   LoRa.print (TH1);
@@ -192,7 +162,7 @@ void SendTH() {
   LoRa.endPacket();
 }
 
-void SendTime() {
+void SendTime(int chargeHours, int chargeMins, int chargeSecs) {
   LoRa.beginPacket();
   LoRa.println ("Charging:          ");
   LoRa.print (chargeHours);
@@ -204,38 +174,84 @@ void SendTime() {
   LoRa.endPacket();
 }
 
+void SmokeAlarm() {
+  int SmokeVal = analogRead(analogPin);     // 0-1035 smoke values
+
+  LoRa.print ("Smoke: ");
+  LoRa.print (SmokeVal);
+  LoRa.println (" (0-1035)      ");
+  LoRa.endPacket();
+}
+
+void setup() {
+  Serial.begin(9600);
+  lcd.init();
+  lcd.backlight();
+
+  LoRa.setPins(4, 2, 3);      //CS, RST, INT
+  //LoRa.setTxPower(5);     //not working
+  //LoRa.setSyncWord(0xBB);     //not working
+
+  //Serial.setTimeout(2000);      //Timeout for Serial.find (1000ms default)
+
+  lcd.setCursor (0, 0);      // Set the cursor on the X column and Y row
+  lcd.print ("Pack: ");
+  lcd.setCursor (0, 1);
+  lcd.print ("Mean cell: ");
+  lcd.setCursor (0, 2);
+  lcd.print ("Cell std dev: ");
+  lcd.setCursor (0, 3);
+  lcd.print ("Msg: ---");
+
+  if (!LoRa.begin(915E6)) {
+    lcd.setCursor (5, 3);
+    lcd.print ("LoRa failed!");
+  }
+}
+
 void loop() {
+  long packVolts = 0;
+  long packMean = 0;
+  long packDev = 0;
+  int TH1 = 0;
+  int TH2 = 0;
+  int TH3 = 0;
+  int TH4 = 0;
+  int chargeHours = 0;
+  int chargeMins = 0;
+  int chargeSecs = 0;
+
   Serial.println ("show");
 
   if (Serial.available() > 0) {
     if (Serial.find("voltage"))
-      Print_Voltage();
+      Print_Voltage(packVolts);
     if (Serial.find("mean   "))
-      Print_Mean();
+      Print_Mean(packMean);
     if (Serial.find("std dev"))
-      Print_Dev();
+      Print_Dev(packDev);
     if (Serial.find("alerts   : "))
       Print_Alerts();
     if (Serial.find("uptime   "))
-      Print_Uptime();
+      Print_Uptime(chargeHours, chargeMins, chargeSecs);
   }
 
-  SendValues();
+  SendValues(packVolts, packMean, packDev);
   delay (2000);
 
-  SendTime();
+  SendTime(chargeHours, chargeMins, chargeSecs);
   delay (2000);
 
   Serial.println ("sh th");
 
   if (Serial.available() > 0) {
     if (Serial.find("2 | "))
-      PrintTH_1_2();
+      PrintTH_1_2(TH1, TH2);
     if (Serial.find("4 | "))
-      PrintTH_3_4();
+      PrintTH_3_4(TH3, TH4);
   }
 
-  SendTH();
+  SendTH(TH1, TH2, TH3, TH4);
   delay (2000);
 
   SmokeAlarm();

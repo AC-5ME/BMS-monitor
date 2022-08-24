@@ -19,7 +19,6 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 int analogPin = A0;     //MQ-135 smoke sensor
 
-
 void Print_Voltage(long& packVolts) {      //Reset screen and print pack voltage
   if (Serial.find(": ")) {
     packVolts =  Serial.parseInt(SKIP_NONE, '.');
@@ -175,12 +174,16 @@ void SendTime(int chargeHours, int chargeMins, int chargeSecs) {
 }
 
 void SmokeAlarm() {
-  int SmokeVal = analogRead(analogPin);     // 0-1035 smoke values
+  int smokeVal = analogRead(analogPin);     // 0-1035 smoke values
 
-  LoRa.print ("Smoke: ");
-  LoRa.print (SmokeVal);
-  LoRa.println (" (0-1035)      ");
-  LoRa.endPacket();
+  if (smokeVal > 500) {
+    //LoRa.print ("Smoke: ");
+    //LoRa.print (smokeVal);
+    //LoRa.println (" (0-1035)      ");
+    LoRa.beginPacket();
+    LoRa.print ("!");
+    LoRa.endPacket();
+  }
 }
 
 void setup() {

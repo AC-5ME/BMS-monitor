@@ -5,6 +5,7 @@
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 int analogPin = A0;     //MQ-135 smoke sensor
+int alarmPin = 8;
 
 void Print_Voltage(long& packVolts) {      //Reset screen and print pack voltage
   if (Serial.find(": ")) {
@@ -113,7 +114,7 @@ void PrintTH_3_4(int& TH3, int& TH4) {      //Print temps #3/4
   lcd.print (TH4);
 }
 
-void SendValues(long packVolts, long packMean, long packDev) {
+void Send_Values(long packVolts, long packMean, long packDev) {
   LoRa.beginPacket();
   LoRa.print ("P");
   LoRa.print ("Pack: ");
@@ -130,7 +131,7 @@ void SendValues(long packVolts, long packMean, long packDev) {
   LoRa.endPacket();
 }
 
-void SendTH(int TH1, int TH2, int TH3, int TH4) {
+void Send_TH(int TH1, int TH2, int TH3, int TH4) {
   LoRa.beginPacket();
   LoRa.print ("T");
   LoRa.print ("TH1: ");
@@ -148,7 +149,7 @@ void SendTH(int TH1, int TH2, int TH3, int TH4) {
   LoRa.endPacket();
 }
 
-void SendTime(int chargeHours, int chargeMins, int chargeSecs) {
+void Send_Time(int chargeHours, int chargeMins, int chargeSecs) {
   LoRa.beginPacket();
   LoRa.print ("U");
   LoRa.println ("Uptime:");
@@ -161,13 +162,35 @@ void SendTime(int chargeHours, int chargeMins, int chargeSecs) {
   LoRa.endPacket();
 }
 
-void SmokeAlarm() {
+void Send_Alarm(long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4) {
   int smokeVal = analogRead(analogPin);     // 0-1035 smoke values
 
-  while (smokeVal > 100) {
+  while (smokeVal > 500) {
     LoRa.beginPacket();
     LoRa.print ("!");
     LoRa.endPacket();
+    analogWrite(alarmPin, 255);
+  }
+
+  while (packVolts > 115) {
+    LoRa.beginPacket();
+    LoRa.print ("!");
+    LoRa.endPacket();
+    analogWrite(alarmPin, 255);
+  }
+
+  while (packDev > .05) {
+    LoRa.beginPacket();
+    LoRa.print ("!");
+    LoRa.endPacket();
+    analogWrite(alarmPin, 255);
+  }
+
+  while (TH1 or TH2 or TH3 or TH4 > 40) {
+    LoRa.beginPacket();
+    LoRa.print ("!");
+    LoRa.endPacket();
+    analogWrite(alarmPin, 255);
   }
 }
 
@@ -175,6 +198,8 @@ void setup() {
   Serial.begin(9600);
   lcd.init();
   lcd.backlight();
+
+  pinMode(alarmPin, OUTPUT);     //Alarm!
 
   LoRa.setPins(4, 2, 3);      //CS, RST, INT
   //LoRa.setTxPower(5);     //not working
@@ -224,10 +249,10 @@ void loop() {
       Print_Uptime(chargeHours, chargeMins, chargeSecs);
   }
 
-  SendValues(packVolts, packMean, packDev);
+  Send_Values(packVolts, packMean, packDev);
   delay (2000);
 
-  SendTime(chargeHours, chargeMins, chargeSecs);
+  Send_Time(chargeHours, chargeMins, chargeSecs);
   delay (2000);
 
   Serial.println ("sh th");
@@ -239,9 +264,9 @@ void loop() {
       PrintTH_3_4(TH3, TH4);
   }
 
-  SendTH(TH1, TH2, TH3, TH4);
+  Send_TH(TH1, TH2, TH3, TH4);
   delay (2000);
 
-  SmokeAlarm();
+  Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
   delay (2000);
 }

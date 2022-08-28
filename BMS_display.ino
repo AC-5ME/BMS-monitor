@@ -4,19 +4,6 @@
 #include <LiquidCrystal_I2C.h>
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
-/*
-  long packVolts = 0;
-  long packMean = 0;
-  long packDev = 0;
-  int TH1 = 0;
-  int TH2 = 0;
-  int TH3 = 0;
-  int TH4 = 0;
-  int chargeHours = 0;
-  int chargeMins = 0;
-  int chargeSecs = 0;
-*/
-
 int analogPin = A0;     //MQ-135 smoke sensor
 
 void Print_Voltage(long& packVolts) {      //Reset screen and print pack voltage
@@ -132,22 +119,15 @@ void SendValues(long packVolts, long packMean, long packDev) {
   LoRa.print ("Pack: ");
   LoRa.print ((packVolts / 100.0));
   LoRa.println ("V");
-  LoRa.endPacket();
 
-  LoRa.beginPacket();
-  LoRa.print ("M");
   LoRa.print ("Mean cell: ");
   LoRa.print ((packMean / 100.0));
   LoRa.println ("V");
-  LoRa.endPacket();
 
-  LoRa.beginPacket();
-  LoRa.print ("C");
   LoRa.print ("Cell std dev: ");
   LoRa.print ((packDev / 1000.0));
-  LoRa.println ("V");
+  LoRa.print ("V");
   LoRa.endPacket();
-
 }
 
 void SendTH(int TH1, int TH2, int TH3, int TH4) {
@@ -184,10 +164,7 @@ void SendTime(int chargeHours, int chargeMins, int chargeSecs) {
 void SmokeAlarm() {
   int smokeVal = analogRead(analogPin);     // 0-1035 smoke values
 
-  if (smokeVal > 500) {
-    //LoRa.print ("Smoke: ");
-    //LoRa.print (smokeVal);
-    //LoRa.println (" (0-1035)      ");
+  while (smokeVal > 100) {
     LoRa.beginPacket();
     LoRa.print ("!");
     LoRa.endPacket();

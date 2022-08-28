@@ -60,45 +60,13 @@ void BatSignal_Display() {
   display.display();
 }
 
-void Volt_Alarm() {
+void Print_Alarm() {
   for (int i = 0; i < 5; i++) {
     display.clearDisplay();
     display.display();
     display.setTextSize(3);
     display.setCursor(15, 10);
-    display.print("Volts!");
-    display.display();
-    //tone(5, 4000, 500);      //Pin, Freq, Duration
-    delay(500);
-  }
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.display();
-}
-
-void Temp_Alarm() {
-  for (int i = 0; i < 5; i++) {
-    display.clearDisplay();
-    display.display();
-    display.setTextSize(3);
-    display.setCursor(15, 10);
-    display.print("Temps!");
-    display.display();
-    //tone(5, 4000, 500);      //Pin, Freq, Duration
-    delay(500);
-  }
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.display();
-}
-
-void Smoke_Alarm() {
-  for (int i = 0; i < 5; i++) {
-    display.clearDisplay();
-    display.display();
-    display.setTextSize(3);
-    display.setCursor(15, 10);
-    display.print("Smoke!");
+    display.print("Alarm!");
     display.display();
     //tone(5, 4000, 500);      //Pin, Freq, Duration
     delay(500);
@@ -149,16 +117,8 @@ void loop() {
             }
           } break;
 
-        case 'V': {     //Pack voltage alarm
-            Volt_Alarm();
-          } break;
-
-        case 'H': {     //Pack temp alarm
-            Temp_Alarm();
-          } break;
-
-        case '!': {     //Charger smoke alarm
-            Smoke_Alarm();
+        case '!': {     //Charger alarm
+            Print_Alarm();
           } break;
       }
     }

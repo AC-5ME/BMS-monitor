@@ -12,11 +12,6 @@ Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
 #define VBATPIN A9
 #define PIEZO_PIN 5 // Piezo speaker/buzzer pin
 
-enum SERIAL_REQUEST {     //Sent msg states
-  P,      //Pack voltage
-  S,      //Smoke alarm
-};
-
 void setup() {
   LoRa.setPins(8, 4, 7);      //CS, RST, INT
   //LoRa.setSyncWord(0xBB);     //Not working
@@ -28,13 +23,11 @@ void setup() {
   display.setTextSize(1);
   display.setTextColor(SH110X_WHITE);
   display.setTextColor(1, 0);
-  display.setCursor(0, 0);
 
   if (!LoRa.begin(915E6)) {
     display.setCursor(0, 0);
     display.print("LoRa failed!");
     display.display();
-    tone(5, 4000, 5000);      //Pin, Freq, Duration
     while (1);
   }
 }
@@ -52,23 +45,13 @@ void BatSignal_Display() {
   measuredVbat /= 1024; // convert to voltage
   int batPercent = ((measuredVbat - batMin) / (span) * 100);
 
-  display.setTextSize(1);
   display.setCursor(0, 40);
   display.print("dBm/snr: ");
   display.print(rssi);
   display.print("/");
   display.print(snr);
-  //display.print(" dBm ");
-  display.display();
 
-  /* if (batPercent > 100) {
-     display.setCursor(0, 48);     //(Row, Column)
-     display.print("Remote charging?       ");
-     display.display();
-
-    } else { */
-
-  display.setCursor(0, 48);
+  display.setCursor(0, 50);
   display.print("Remote: ");
   display.print(batPercent);
   display.print("%  ");
@@ -77,22 +60,39 @@ void BatSignal_Display() {
   display.display();
 }
 
-void Print_Pack() {
-  display.setTextSize(1);
-  display.setCursor(0, 0);
-  Serial.print("got it!");
-  int packetSize = LoRa.parsePacket();
-  if (packetSize) {     // received a packet?
-
-    while (LoRa.available()) {
-
-      display.print((char)LoRa.read());
-      display.display();
-    }
+void Volt_Alarm() {
+  for (int i = 0; i < 5; i++) {
+    display.clearDisplay();
+    display.display();
+    display.setTextSize(3);
+    display.setCursor(15, 10);
+    display.print("Volts!");
+    display.display();
+    //tone(5, 4000, 500);      //Pin, Freq, Duration
+    delay(500);
   }
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.display();
 }
 
-void Print_Smoke() {
+void Temp_Alarm() {
+  for (int i = 0; i < 5; i++) {
+    display.clearDisplay();
+    display.display();
+    display.setTextSize(3);
+    display.setCursor(15, 10);
+    display.print("Temps!");
+    display.display();
+    //tone(5, 4000, 500);      //Pin, Freq, Duration
+    delay(500);
+  }
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.display();
+}
+
+void Smoke_Alarm() {
   for (int i = 0; i < 5; i++) {
     display.clearDisplay();
     display.display();
@@ -104,20 +104,19 @@ void Print_Smoke() {
     delay(500);
   }
   display.clearDisplay();
+  display.setTextSize(1);
   display.display();
 }
 
 void loop() {
-  display.setTextSize(1);
-
   BatSignal_Display();
 
   int packetSize = LoRa.parsePacket();
   if (packetSize) {     // received a packet?
 
-    while (LoRa.available()) {
+    if (LoRa.available()) {
       switch ((char)LoRa.read()) {
-        case 'P': {
+        case 'P': {     //Pack volts
             display.clearDisplay();
             display.setCursor(0, 0);
             display.display();
@@ -128,25 +127,7 @@ void loop() {
             }
           } break;
 
-        case 'M': {
-            display.setCursor(0, 10);
-
-            while (LoRa.available()) {
-              display.print((char)LoRa.read());
-              display.display();
-            }
-          } break;
-
-        case 'C': {
-            display.setCursor(0, 20);
-
-            while (LoRa.available()) {
-              display.print((char)LoRa.read());
-              display.display();
-            }
-          } break;
-
-        case 'T': {
+        case 'T': {     //Pack temps
             display.clearDisplay();
             display.setCursor(0, 0);
             display.display();
@@ -157,7 +138,7 @@ void loop() {
             }
           } break;
 
-        case 'U': {
+        case 'U': {     //Charger uptime
             display.clearDisplay();
             display.setCursor(0, 0);
             display.display();
@@ -168,8 +149,16 @@ void loop() {
             }
           } break;
 
-        case '!': {
-            Print_Smoke();
+        case 'V': {     //Pack voltage alarm
+            Volt_Alarm();
+          } break;
+
+        case 'H': {     //Pack temp alarm
+            Temp_Alarm();
+          } break;
+
+        case '!': {     //Charger smoke alarm
+            Smoke_Alarm();
           } break;
       }
     }

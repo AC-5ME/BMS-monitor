@@ -17,58 +17,6 @@ enum SERIAL_REQUEST {     //Sent msg states
   S,      //Smoke alarm
 };
 
-void BatSignal_Display() {
-  int rssi = LoRa.packetRssi();     //Signal strength
-  float snr = LoRa.packetSnr();     //Signal/noise ratio
-
-  const int batMin = 3.2;    //Remote battery % conversion
-  const int batMax = 4.3;
-  const int span = batMax - batMin;
-  float measuredVbat = analogRead(VBATPIN);
-  measuredVbat *= 2;    // we divided by 2, so multiply back
-  measuredVbat *= 3.3;  // Multiply by 3.3V, our reference voltage
-  measuredVbat /= 1024; // convert to voltage
-  int batPercent = ((measuredVbat - batMin) / (span) * 100);
-
-  display.setCursor(0, 40);
-  display.print("Signal: ");
-  display.print(rssi);
-  display.print("/");
-  display.print(snr);
-  //display.print(" dBm ");
-  display.display();
-
-  /* if (batPercent > 100) {
-     display.setCursor(0, 48);     //(Row, Column)
-     display.print("Remote charging?       ");
-     display.display();
-
-    } else { */
-
-  display.setCursor(0, 48);
-  display.print("Remote: ");
-  display.print(batPercent);
-  display.print("%  ");
-  display.print(measuredVbat);
-  display.print("V ");
-  display.display();
-}
-
-void smoke() {
-  for (int i = 0; i < 5; i++) {
-    display.clearDisplay();
-    display.display();
-    display.setTextSize(3);
-    display.setCursor(15, 10);
-    display.print("Smoke!");
-    display.display();
-    //tone(5, 4000, 500);      //Pin, Freq, Duration
-    delay(500);
-  }
-  display.clearDisplay();
-  display.display();
-}
-
 void setup() {
   LoRa.setPins(8, 4, 7);      //CS, RST, INT
   //LoRa.setSyncWord(0xBB);     //Not working
@@ -91,23 +39,139 @@ void setup() {
   }
 }
 
+void BatSignal_Display() {
+  int rssi = LoRa.packetRssi();     //Signal strength
+  float snr = LoRa.packetSnr();     //Signal/noise ratio
+
+  const int batMin = 3.2;    //Remote battery % conversion
+  const int batMax = 4.2;
+  const int span = batMax - batMin;
+  float measuredVbat = analogRead(VBATPIN);
+  measuredVbat *= 2;    // we divided by 2, so multiply back
+  measuredVbat *= 3.3;  // Multiply by 3.3V, our reference voltage
+  measuredVbat /= 1024; // convert to voltage
+  int batPercent = ((measuredVbat - batMin) / (span) * 100);
+
+  display.setTextSize(1);
+  display.setCursor(0, 40);
+  display.print("dBm/snr: ");
+  display.print(rssi);
+  display.print("/");
+  display.print(snr);
+  //display.print(" dBm ");
+  display.display();
+
+  /* if (batPercent > 100) {
+     display.setCursor(0, 48);     //(Row, Column)
+     display.print("Remote charging?       ");
+     display.display();
+
+    } else { */
+
+  display.setCursor(0, 48);
+  display.print("Remote: ");
+  display.print(batPercent);
+  display.print("%  ");
+  display.print(measuredVbat);
+  display.print("V ");
+  display.display();
+}
+
+void Print_Pack() {
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  Serial.print("got it!");
+  int packetSize = LoRa.parsePacket();
+  if (packetSize) {     // received a packet?
+
+    while (LoRa.available()) {
+
+      display.print((char)LoRa.read());
+      display.display();
+    }
+  }
+}
+
+void Print_Smoke() {
+  for (int i = 0; i < 5; i++) {
+    display.clearDisplay();
+    display.display();
+    display.setTextSize(3);
+    display.setCursor(15, 10);
+    display.print("Smoke!");
+    display.display();
+    //tone(5, 4000, 500);      //Pin, Freq, Duration
+    delay(500);
+  }
+  display.clearDisplay();
+  display.display();
+}
+
 void loop() {
   display.setTextSize(1);
+
   BatSignal_Display();
 
   int packetSize = LoRa.parsePacket();
   if (packetSize) {     // received a packet?
 
-    display.setCursor(0, 0);
-
     while (LoRa.available()) {
       switch ((char)LoRa.read()) {
-        case '!':
-          smoke();
-          break;
+        case 'P': {
+            display.clearDisplay();
+            display.setCursor(0, 0);
+            display.display();
+
+            while (LoRa.available()) {
+              display.print((char)LoRa.read());
+              display.display();
+            }
+          } break;
+
+        case 'M': {
+            display.setCursor(0, 10);
+
+            while (LoRa.available()) {
+              display.print((char)LoRa.read());
+              display.display();
+            }
+          } break;
+
+        case 'C': {
+            display.setCursor(0, 20);
+
+            while (LoRa.available()) {
+              display.print((char)LoRa.read());
+              display.display();
+            }
+          } break;
+
+        case 'T': {
+            display.clearDisplay();
+            display.setCursor(0, 0);
+            display.display();
+
+            while (LoRa.available()) {
+              display.print((char)LoRa.read());
+              display.display();
+            }
+          } break;
+
+        case 'U': {
+            display.clearDisplay();
+            display.setCursor(0, 0);
+            display.display();
+
+            while (LoRa.available()) {
+              display.print((char)LoRa.read());
+              display.display();
+            }
+          } break;
+
+        case '!': {
+            Print_Smoke();
+          } break;
       }
-      display.print((char)LoRa.read());
-      display.display();
     }
   }
 }

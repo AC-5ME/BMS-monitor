@@ -4,8 +4,9 @@
 #include <LiquidCrystal_I2C.h>
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
-int analogPin = A0;     //MQ-135 smoke sensor
+int smokePin = A0;     //MQ-135 smoke sensor
 int alarmPin = 8;
+int testPin = 5;
 
 void Print_Voltage(long& packVolts) {      //Reset screen and print pack voltage
   if (Serial.find(": ")) {
@@ -162,8 +163,19 @@ void Send_Time(int chargeHours, int chargeMins, int chargeSecs) {
   LoRa.endPacket();
 }
 
-void Send_Alarm(long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4) {
-  int smokeVal = analogRead(analogPin);     // 0-1035 smoke values
+void Send_Alarm(int smokeVal, long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4) {
+
+  /*Serial.print ("smokeVal: ");
+    Serial.println (smokeVal);
+    Serial.print ("pack: ");
+    Serial.println ((packVolts / 100.0));
+    Serial.print ("TH: ");
+    Serial.println (TH1);
+    Serial.println (TH2);
+    Serial.println (TH3);
+    Serial.println (TH4);
+    Serial.print ("dev: ");
+    Serial.println ((packDev / 1000.0));*/
 
   while (smokeVal > 500) {
     LoRa.beginPacket();
@@ -172,25 +184,41 @@ void Send_Alarm(long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4
     analogWrite(alarmPin, 255);
   }
 
-  while (packVolts > 115) {
+  while (((packVolts / 100.0) > 115.00)) {
     LoRa.beginPacket();
     LoRa.print ("!");
     LoRa.endPacket();
     analogWrite(alarmPin, 255);
   }
 
-  while (packDev > .05) {
+  while ((packDev / 1000.0) > .05) {
     LoRa.beginPacket();
     LoRa.print ("!");
     LoRa.endPacket();
     analogWrite(alarmPin, 255);
   }
 
-  while (TH1 or TH2 or TH3 or TH4 > 40) {
+  while ((TH1 > 40) or (TH2 > 40) or (TH3 > 40) or (TH4 > 40)) {
     LoRa.beginPacket();
     LoRa.print ("!");
     LoRa.endPacket();
     analogWrite(alarmPin, 255);
+  }
+}
+
+void Alarm_Test() {
+  int testVal = digitalRead(testPin);     //Alarm test button
+
+  if (testVal == LOW) {
+    LoRa.beginPacket();
+    LoRa.print ("!");
+    LoRa.endPacket();
+    lcd.setCursor (0, 3);
+    lcd.print ("    -Alarm test-    ");
+    analogWrite(alarmPin, 150);
+    delay (150);
+    analogWrite(alarmPin, 0);
+    testVal = HIGH;
   }
 }
 
@@ -199,7 +227,8 @@ void setup() {
   lcd.init();
   lcd.backlight();
 
-  pinMode(alarmPin, OUTPUT);     //Alarm!
+  pinMode(testPin, INPUT_PULLUP);     //Test button
+  pinMode(alarmPin, OUTPUT);    //Alarm!
 
   LoRa.setPins(4, 2, 3);      //CS, RST, INT
   //LoRa.setTxPower(5);     //not working
@@ -233,6 +262,9 @@ void loop() {
   int chargeHours = 0;
   int chargeMins = 0;
   int chargeSecs = 0;
+  int smokeVal = analogRead(smokePin);     // 0-1035 smoke values
+
+  Alarm_Test();
 
   Serial.println ("show");
 
@@ -252,8 +284,13 @@ void loop() {
   Send_Values(packVolts, packMean, packDev);
   delay (2000);
 
+  Alarm_Test();
+
+
   Send_Time(chargeHours, chargeMins, chargeSecs);
   delay (2000);
+
+  Alarm_Test();
 
   Serial.println ("sh th");
 
@@ -267,6 +304,8 @@ void loop() {
   Send_TH(TH1, TH2, TH3, TH4);
   delay (2000);
 
-  Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
+  Alarm_Test();
+
+  Send_Alarm(smokeVal, packVolts, packDev, TH1, TH2, TH3, TH4);
   delay (2000);
 }

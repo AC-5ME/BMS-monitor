@@ -10,11 +10,13 @@ Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
 #define BUTTON_B  6
 #define BUTTON_C  5
 #define VBATPIN A9
-#define PIEZO_PIN 5 // Piezo speaker/buzzer pin
+int alarmPin = 5; // Piezo buzzer pin
 
 void setup() {
   LoRa.setPins(8, 4, 7);      //CS, RST, INT
   //LoRa.setSyncWord(0xBB);     //Not working
+
+  //pinMode(alarmPin, OUTPUT);      //Not working, drains battery
 
   display.begin(0x3C, true); // Address 0x3C default
   display.clearDisplay();
@@ -45,13 +47,17 @@ void BatSignal_Display() {
   measuredVbat /= 1024; // convert to voltage
   int batPercent = ((measuredVbat - batMin) / (span) * 100);
 
-  display.setCursor(0, 40);
-  display.print("dBm/snr: ");
+  display.setCursor(0, 35);
+  display.print("RSSI: ");
   display.print(rssi);
-  display.print("/");
-  display.print(snr);
+  display.print(" dBm");
 
-  display.setCursor(0, 50);
+  display.setCursor(0, 45);
+  display.print("S/N: ");
+  display.print(snr);
+  display.print(" dBm");
+
+  display.setCursor(0, 55);
   display.print("Remote: ");
   display.print(batPercent);
   display.print("%  ");
@@ -61,19 +67,16 @@ void BatSignal_Display() {
 }
 
 void Print_Alarm() {
-  for (int i = 0; i < 5; i++) {
+  while (1) {
     display.clearDisplay();
     display.display();
     display.setTextSize(3);
-    display.setCursor(15, 10);
+    display.setCursor(15, 20);
     display.print("Alarm!");
     display.display();
-    //tone(5, 4000, 500);      //Pin, Freq, Duration
+    //tone(alarmPin, 4000, 500);      //Pin, Freq, Duration
     delay(500);
   }
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.display();
 }
 
 void loop() {

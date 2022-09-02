@@ -163,7 +163,10 @@ void Send_Time(int chargeHours, int chargeMins, int chargeSecs) {
   LoRa.endPacket();
 }
 
-void Send_Alarm(int smokeVal, long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4) {
+void Send_Alarm(long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4) {
+  int smokeVal = analogRead(smokePin);     // 0-1035 smoke values
+  lcd.setCursor (17, 3);
+  lcd.print (smokeVal);
 
   /*Serial.print ("smokeVal: ");
     Serial.println (smokeVal);
@@ -177,7 +180,7 @@ void Send_Alarm(int smokeVal, long packVolts, long packDev, int TH1, int TH2, in
     Serial.print ("dev: ");
     Serial.println ((packDev / 1000.0));*/
 
-  while (smokeVal > 500) {
+  while (smokeVal > 300) {
     LoRa.beginPacket();
     LoRa.print ("!");
     LoRa.endPacket();
@@ -262,7 +265,7 @@ void loop() {
   int chargeHours = 0;
   int chargeMins = 0;
   int chargeSecs = 0;
-  int smokeVal = analogRead(smokePin);     // 0-1035 smoke values
+  int smokeVal = 0;
 
   Alarm_Test();
 
@@ -281,17 +284,20 @@ void loop() {
       Print_Uptime(chargeHours, chargeMins, chargeSecs);
   }
 
+  Alarm_Test();
+  Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
+
   Send_Values(packVolts, packMean, packDev);
   delay (2000);
 
   Alarm_Test();
-
+  Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
 
   Send_Time(chargeHours, chargeMins, chargeSecs);
   delay (2000);
 
   Alarm_Test();
-
+  Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
   Serial.println ("sh th");
 
   if (Serial.available() > 0) {
@@ -305,7 +311,6 @@ void loop() {
   delay (2000);
 
   Alarm_Test();
-
-  Send_Alarm(smokeVal, packVolts, packDev, TH1, TH2, TH3, TH4);
+  Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
   delay (2000);
 }

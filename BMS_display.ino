@@ -168,7 +168,7 @@ void Send_Alarm(long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4
   lcd.setCursor (17, 3);
   lcd.print (smokeVal);
 
-  /*Serial.print ("smokeVal: ");
+  /*Serial.print ("smokeVal: ");      //Debug output,
     Serial.println (smokeVal);
     Serial.print ("pack: ");
     Serial.println ((packVolts / 100.0));
@@ -180,11 +180,13 @@ void Send_Alarm(long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4
     Serial.print ("dev: ");
     Serial.println ((packDev / 1000.0));*/
 
-  while (smokeVal > 300) {
-    LoRa.beginPacket();
-    LoRa.print ("!");
-    LoRa.endPacket();
-    analogWrite(alarmPin, 255);
+  if (millis() > 60000) {     //Sensor warm-up delay
+    while (smokeVal > 300) {      //300 for light smoke
+      LoRa.beginPacket();
+      LoRa.print ("!");
+      LoRa.endPacket();
+      analogWrite(alarmPin, 255);
+    }
   }
 
   while (((packVolts / 100.0) > 115.00)) {
@@ -201,7 +203,7 @@ void Send_Alarm(long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4
     analogWrite(alarmPin, 255);
   }
 
-  while ((TH1 > 40) or (TH2 > 40) or (TH3 > 40) or (TH4 > 40)) {
+  while ((TH1 > 55) or (TH2 > 55) or (TH3 > 55) or (TH4 > 55)) {
     LoRa.beginPacket();
     LoRa.print ("!");
     LoRa.endPacket();

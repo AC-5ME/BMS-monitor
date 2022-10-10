@@ -98,6 +98,17 @@ void loop() {
             }
           } break;
 
+        case 'A': {     //Alerts
+            display.clearDisplay();
+            display.setCursor(0, 0);
+            display.display();
+
+            while (LoRa.available()) {
+              display.print((char)LoRa.read());
+              display.display();
+            }
+          } break;
+
         case 'T': {     //Pack temps
             display.clearDisplay();
             display.setCursor(0, 0);

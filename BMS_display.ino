@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <LiquidCrystal_I2C.h>
+
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 int smokePin = A0;     //MQ-135 smoke sensor
@@ -12,7 +13,6 @@ void Print_Voltage(long& packVolts, int& packPercent) {      //Reset screen and 
   const int packMin = 84.0;    //Pack voltage % conversion (3V to 4V1 per cell)
   const int packMax = 114.8;
   const int span = packMax - packMin;
-
 
   if (Serial.find(": ")) {
     packVolts =  Serial.parseInt(SKIP_NONE, '.');
@@ -64,9 +64,17 @@ void Print_Dev(long& packDev) {      //Print cell volt standard deviation
 }
 
 void Print_Alerts() {     //Print Alerts
+  LoRa.beginPacket();
+  LoRa.print ("A");
+  LoRa.print ("Alerts: ");
+  LoRa.endPacket();
+
   lcd.setCursor (5, 3);
-  for (int i = 1; i <= 11; i++) {
+
+  for (int i = 1; i <= 13; i++) {
     char c = Serial.read ();
+    LoRa.print (c);
+    LoRa.endPacket();
     lcd.print(c);
   }
 }
@@ -196,7 +204,7 @@ void Send_Alarm(long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4
     Serial.println ((packDev / 1000.0));*/
 
   if (millis() > 60000) {     //Smoke sensor warm-up delay
-    while (smokeVal > 250) {      //300 for light smoke
+    while (smokeVal > 300) {      //300 for light smoke
       LoRa.beginPacket();
       LoRa.print ("!");
       LoRa.endPacket();

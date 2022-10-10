@@ -8,9 +8,16 @@ int smokePin = A0;     //MQ-135 smoke sensor
 int alarmPin = 8;
 int testPin = 5;
 
-void Print_Voltage(long& packVolts) {      //Reset screen and print pack voltage
+void Print_Voltage(long& packVolts, int& packPercent) {      //Reset screen and print pack voltage
+  const int packMin = 84.0;    //Pack voltage % conversion (3V to 4V1 per cell)
+  const int packMax = 114.8;
+  const int span = packMax - packMin;
+
+
   if (Serial.find(": ")) {
     packVolts =  Serial.parseInt(SKIP_NONE, '.');
+
+    packPercent = (((packVolts / 100.0) - packMin) / span) * 100;
 
     lcd.clear();
     lcd.print ("Pack: ");
@@ -25,6 +32,11 @@ void Print_Voltage(long& packVolts) {      //Reset screen and print pack voltage
     lcd.print ((packVolts / 100.0));
     lcd.setCursor (12, 0);
     lcd.print ("V");
+
+    lcd.setCursor (16, 0);
+    lcd.print (packPercent);
+    lcd.setCursor (18, 0);
+    lcd.print ("%");
   }
 }
 
@@ -115,12 +127,15 @@ void PrintTH_3_4(int& TH3, int& TH4) {      //Print temps #3/4
   lcd.print (TH4);
 }
 
-void Send_Values(long packVolts, long packMean, long packDev) {
+void Send_Values(long packVolts, int packPercent, long packMean, long packDev) {
   LoRa.beginPacket();
   LoRa.print ("P");
   LoRa.print ("Pack: ");
   LoRa.print ((packVolts / 100.0));
-  LoRa.println ("V");
+  LoRa.print ("V  ");
+
+  LoRa.print (packPercent);
+  LoRa.println ("%");
 
   LoRa.print ("Mean cell: ");
   LoRa.print ((packMean / 100.0));
@@ -180,8 +195,8 @@ void Send_Alarm(long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4
     Serial.print ("dev: ");
     Serial.println ((packDev / 1000.0));*/
 
-  if (millis() > 60000) {     //Sensor warm-up delay
-    while (smokeVal > 300) {      //300 for light smoke
+  if (millis() > 60000) {     //Smoke sensor warm-up delay
+    while (smokeVal > 250) {      //300 for light smoke
       LoRa.beginPacket();
       LoRa.print ("!");
       LoRa.endPacket();
@@ -203,7 +218,7 @@ void Send_Alarm(long packVolts, long packDev, int TH1, int TH2, int TH3, int TH4
     analogWrite(alarmPin, 255);
   }
 
-  while ((TH1 > 55) or (TH2 > 55) or (TH3 > 55) or (TH4 > 55)) {
+  while ((TH1 > 55) or (TH2 > 55) or (TH3 > 55) or (TH4 > 55)) {      //60C max cell temp from datasheet
     LoRa.beginPacket();
     LoRa.print ("!");
     LoRa.endPacket();
@@ -258,6 +273,7 @@ void setup() {
 
 void loop() {
   long packVolts = 0;
+  int packPercent = 0;
   long packMean = 0;
   long packDev = 0;
   int TH1 = 0;
@@ -275,7 +291,7 @@ void loop() {
 
   if (Serial.available() > 0) {
     if (Serial.find("voltage"))
-      Print_Voltage(packVolts);
+      Print_Voltage(packVolts, packPercent);
     if (Serial.find("mean   "))
       Print_Mean(packMean);
     if (Serial.find("std dev"))
@@ -289,7 +305,7 @@ void loop() {
   Alarm_Test();
   Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
 
-  Send_Values(packVolts, packMean, packDev);
+  Send_Values(packVolts, packPercent, packMean, packDev);
   delay (2000);
 
   Alarm_Test();

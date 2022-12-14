@@ -41,7 +41,6 @@ void Print_Voltage(long& packVolts, int& packPercent) {      //Reset screen and 
   lcd.print ("%");
 }
 
-
 void Print_Mean(long& packMean) {     //Print cell volt mean
   packMean =  Serial.parseInt(SKIP_WHITESPACE, '.');
 
@@ -68,12 +67,9 @@ void Print_Alerts(long& packVolts, int& packPercent, long& packMean, long& packD
 
   Send_Values(packVolts, packPercent, packMean, packDev);
 
-  Send_Alerts();
-
-  delay (2000);     //Pause on display
+  delay (3000);     //Pause on display
 
 }
-
 
 void Print_Uptime(int& chargeHours, int& chargeMins, int& chargeSecs) {     //Print charge time elapsed
   chargeHours = Serial.parseInt();
@@ -97,7 +93,7 @@ void Print_Uptime(int& chargeHours, int& chargeMins, int& chargeSecs) {     //Pr
 
   Send_Time(chargeHours, chargeMins, chargeSecs);
 
-  delay (2000);     //Pause on display
+  delay (3000);     //Pause on display
 }
 
 void PrintTH_1_2(int& TH1, int& TH2) {      //Print temps #1/2
@@ -131,7 +127,7 @@ void PrintTH_3_4(int& TH1, int& TH2, int& TH3, int& TH4) {      //Print temps #3
 
   Send_TH(TH1, TH2, TH3, TH4);
 
-  delay (2000);     //Pause on display
+  delay (3000);     //Pause on display
 }
 
 void Send_Values(long& packVolts, int& packPercent, long& packMean, long& packDev) {
@@ -150,13 +146,8 @@ void Send_Values(long& packVolts, int& packPercent, long& packMean, long& packDe
 
   LoRa.print ("Cell std dev: ");
   LoRa.print ((packDev / 1000.0));
-  LoRa.print ("V");
-  LoRa.endPacket();
-}
+  LoRa.println ("V");
 
-void Send_Alerts() {
-  LoRa.beginPacket();
-  LoRa.print ("A");
   LoRa.print ("Alerts: ");
   LoRa.print (Alerts);
   LoRa.endPacket();
@@ -193,7 +184,7 @@ void Send_Time(int& chargeHours, int& chargeMins, int& chargeSecs) {
   LoRa.endPacket();
 }
 
-void Send_Alarm(long& packVolts, long& packDev, int& TH1, int& TH2, int& TH3, int& TH4) {
+void Send_Alarm(long& packVolts, long& packDev, int& TH1, int& TH2, int& TH3, int& TH4) {    //Sends 0's to remote to indicate failure
   int smokeVal = analogRead(smokePin);     // 0-1035 smoke values
 
   /*lcd.setCursor (17, 3);      //Debug output
@@ -261,7 +252,6 @@ void setup() {
   Serial.begin(9600);
   lcd.begin(20, 4);
 
-
   pinMode(testPin, INPUT_PULLUP);     //Test button
   pinMode(alarmPin, OUTPUT);    //Alarm!
 
@@ -287,7 +277,7 @@ void setup() {
 }
 
 void loop() {
-  long packVolts = 0;     //Sends 0's to remote to indicate failure
+  long packVolts = 0;
   int packPercent = 0;
   long packMean = 0;
   long packDev = 0;
@@ -304,7 +294,7 @@ void loop() {
   Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
 
   Serial.println ("show");
-  delay(50);      //Delay to allow BMS to respond
+  delay(100);      //Delay to allow BMS to respond
 
   if (Serial.available()) {
     if (Serial.find("voltage:")) {
@@ -328,7 +318,7 @@ void loop() {
   Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
 
   Serial.println ("sh th");
-  delay(50);      //Delay to allow BMS to respond
+  delay(100);      //Delay to allow BMS to respond
 
   if (Serial.available()) {
     if (Serial.find("2 | "))  {

@@ -13,76 +13,72 @@ int testPin = 5;
 char Alerts [] = "No Messages";     //array for BMS alert msg
 
 void Print_Voltage(long& packVolts, int& packPercent) {      //Reset screen and print pack voltage
-  const int packMin = 84.0;    //Pack voltage % conversion (3V to 4V1 per cell)
-  const int packMax = 114.8;
+  const int packMin = 84.00;    //Pack voltage % conversion (3V to 4V1 per cell)
+  const int packMax = 114.80;
   const int span = packMax - packMin;
 
-  if (Serial.find(": ")) {
-    packVolts =  Serial.parseInt(SKIP_NONE, '.');
+  packVolts = Serial.parseInt(SKIP_WHITESPACE, '.');
 
-    packPercent = (((packVolts / 100.0) - packMin) / span) * 100;
+  packPercent = (((packVolts / 100.0) - packMin) / (span) * 100);
 
-    lcd.clear();
-    lcd.print ("Pack: ");
-    lcd.setCursor (0, 1);
-    lcd.print ("Mean cell: ");
-    lcd.setCursor (0, 2);
-    lcd.print ("Cell std dev: ");
-    lcd.setCursor (0, 3);
-    lcd.print ("Alerts: ---");
+  lcd.clear();
+  lcd.print ("Pack: ");
+  lcd.setCursor (0, 1);
+  lcd.print ("Mean cell: ");
+  lcd.setCursor (0, 2);
+  lcd.print ("Cell std dev: ");
+  lcd.setCursor (0, 3);
+  lcd.print ("Alerts: ---");
 
-    lcd.setCursor (6, 0);
-    lcd.print (packVolts / 100.0), ("V ");
-    lcd.setCursor (12, 0);
-    lcd.print ("V");
+  lcd.setCursor (6, 0);
+  lcd.print ((packVolts / 100.0));
+  lcd.setCursor (12, 0);
+  lcd.print ("V");
 
-    lcd.setCursor (16, 0);
-    lcd.print (packPercent);
-    lcd.setCursor (18, 0);
-    lcd.print ("%");
-
-  }
+  lcd.setCursor (16, 0);
+  lcd.print (packPercent);
+  lcd.setCursor (18, 0);
+  lcd.print ("%");
 }
 
-void Print_Mean(long& packMean) {     //Print cell volt mean
-  if (Serial.find(": ")) {
-    packMean =  Serial.parseInt(SKIP_NONE, '.');
 
-    lcd.setCursor (11, 1);
-    lcd.print (packMean / 100.0);
-    lcd.setCursor (15, 1);
-    lcd.print ("V");
-  }
+void Print_Mean(long& packMean) {     //Print cell volt mean
+  packMean =  Serial.parseInt(SKIP_WHITESPACE, '.');
+
+  lcd.setCursor (11, 1);
+  lcd.print (packMean / 1000.0);
+  lcd.setCursor (15, 1);
+  lcd.print ("V");
 }
 
 void Print_Dev(long& packDev) {      //Print cell volt standard deviation
-  if (Serial.find(": ")) {
-    packDev =  Serial.parseInt(SKIP_NONE, '.');
+  packDev =  Serial.parseInt(SKIP_WHITESPACE, '.');
 
-    lcd.setCursor (14, 2);
-    lcd.print (packDev / 1000.0);
-    lcd.setCursor (18, 2);
-    lcd.print ("V");
-  }
+  lcd.setCursor (14, 2);
+  lcd.print (packDev / 1000.0);
+  lcd.setCursor (18, 2);
+  lcd.print ("V");
 }
 
-void Print_Alerts() {     //Print Alerts
-  lcd.setCursor (8, 3);
-
+void Print_Alerts(long& packVolts, int& packPercent, long& packMean, long& packDev) {     //Print Alerts
   Serial.readBytesUntil('\n', Alerts, 11);
+
+  lcd.setCursor (8, 3);
   lcd.print (Alerts);
+
+  Send_Values(packVolts, packPercent, packMean, packDev);
+
+  Send_Alerts();
+
+  delay (2000);     //Pause on display
+
 }
 
 
 void Print_Uptime(int& chargeHours, int& chargeMins, int& chargeSecs) {     //Print charge time elapsed
-  if (Serial.available()) {
-
-    chargeHours = Serial.parseInt();
-    chargeMins = Serial.parseInt();
-    chargeSecs = Serial.parseInt();
-  }
-
-  delay (2000);
+  chargeHours = Serial.parseInt();
+  chargeMins = Serial.parseInt();
+  chargeSecs = Serial.parseInt();
 
   lcd.clear();
   lcd.print ("      -Uptime-");
@@ -98,6 +94,10 @@ void Print_Uptime(int& chargeHours, int& chargeMins, int& chargeSecs) {     //Pr
   lcd.print ("Seconds: ");
   lcd.setCursor (9, 3);
   lcd.print (chargeSecs);
+
+  Send_Time(chargeHours, chargeMins, chargeSecs);
+
+  delay (2000);     //Pause on display
 }
 
 void PrintTH_1_2(int& TH1, int& TH2) {      //Print temps #1/2
@@ -116,7 +116,7 @@ void PrintTH_1_2(int& TH1, int& TH2) {      //Print temps #1/2
   lcd.print (TH2);
 }
 
-void PrintTH_3_4(int& TH3, int& TH4) {      //Print temps #3/4
+void PrintTH_3_4(int& TH1, int& TH2, int& TH3, int& TH4) {      //Print temps #3/4
   TH3 = Serial.parseInt();
   TH4 = Serial.parseInt();
 
@@ -128,6 +128,10 @@ void PrintTH_3_4(int& TH3, int& TH4) {      //Print temps #3/4
   lcd.print (TH3);
   lcd.setCursor (17, 2);
   lcd.print (TH4);
+
+  Send_TH(TH1, TH2, TH3, TH4);
+
+  delay (2000);     //Pause on display
 }
 
 void Send_Values(long& packVolts, int& packPercent, long& packMean, long& packDev) {
@@ -141,7 +145,7 @@ void Send_Values(long& packVolts, int& packPercent, long& packMean, long& packDe
   LoRa.println ("%");
 
   LoRa.print ("Mean cell: ");
-  LoRa.print ((packMean / 100.0));
+  LoRa.print ((packMean / 1000.0));
   LoRa.println ("V");
 
   LoRa.print ("Cell std dev: ");
@@ -150,7 +154,7 @@ void Send_Values(long& packVolts, int& packPercent, long& packMean, long& packDe
   LoRa.endPacket();
 }
 
-void Send_Alerts () {
+void Send_Alerts() {
   LoRa.beginPacket();
   LoRa.print ("A");
   LoRa.print ("Alerts: ");
@@ -297,25 +301,25 @@ void loop() {
   int smokeVal = 0;
 
   Alarm_Test();
-
-  Serial.flush();
+  Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
 
   Serial.println ("show");
+  delay(50);      //Delay to allow BMS to respond
 
   if (Serial.available()) {
-    if (Serial.find("voltage")) {
+    if (Serial.find("voltage:")) {
       Print_Voltage(packVolts, packPercent);
     }
-    if (Serial.find("mean   ")) {
+    if (Serial.find("mean   :")) {
       Print_Mean(packMean);
     }
-    if (Serial.find("std dev")) {
+    if (Serial.find("std dev:")) {
       Print_Dev(packDev);
     }
     if (Serial.find("alerts   : ")) {
-      Print_Alerts();
+      Print_Alerts(packVolts, packPercent, packMean, packDev);
     }
-    if (Serial.find("uptime   ")) {
+    if (Serial.find("uptime   :")) {
       Print_Uptime(chargeHours, chargeMins, chargeSecs);
     }
   }
@@ -323,33 +327,17 @@ void loop() {
   Alarm_Test();
   Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
 
-  Send_Values(packVolts, packPercent, packMean, packDev);
-  delay (2000);
-  Send_Alerts ();
-  delay (2000);
-
-  Alarm_Test();
-  Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
-
-  Send_Time(chargeHours, chargeMins, chargeSecs);
-  delay (2000);
-
-  Alarm_Test();
-  Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);
-
   Serial.println ("sh th");
+  delay(50);      //Delay to allow BMS to respond
 
   if (Serial.available()) {
     if (Serial.find("2 | "))  {
       PrintTH_1_2(TH1, TH2);
     }
     if (Serial.find("4 | ")) {
-      PrintTH_3_4(TH3, TH4);
+      PrintTH_3_4(TH1, TH2, TH3, TH4);
     }
   }
-
-  Send_TH(TH1, TH2, TH3, TH4);
-  delay (2000);
 
   Alarm_Test();
   Send_Alarm(packVolts, packDev, TH1, TH2, TH3, TH4);

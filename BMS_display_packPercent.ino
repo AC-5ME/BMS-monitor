@@ -69,31 +69,17 @@ void Print_Dev(long& packDev) {      //Print cell volt standard deviation
 void Print_Alerts() {     //Print Alerts
   lcd.setCursor (8, 3);
 
-  for (int i = 0; i <= 11; i++) {
-    Alerts [i] = Serial.read ();
-    delay (10);
-  }
-
-  for (int i = 1; i <= 11; i++) {
-    lcd.print (Alerts [i]);
-  }
+  Serial.readBytesUntil('\n', Alerts, 11);
+  lcd.print (Alerts);
 }
 
 
 void Print_Uptime(int& chargeHours, int& chargeMins, int& chargeSecs) {     //Print charge time elapsed
   if (Serial.available()) {
 
-    //if (Serial.find(": ")) {
-      chargeHours =  Serial.parseInt();
-   // }
-
-   // if (Serial.find(", ")) {
-      chargeMins =  Serial.parseInt();
-   // }
-
-   // if (Serial.find(", ")) {
-      chargeSecs =  Serial.parseInt();
-   // }
+    chargeHours = Serial.parseInt();
+    chargeMins = Serial.parseInt();
+    chargeSecs = Serial.parseInt();
   }
 
   delay (2000);

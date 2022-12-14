@@ -98,9 +98,9 @@ void loop() {
             }
           } break;
 
-        case 'A': {     //Alerts
+        case 'A': {     //Alerts (inop)
             display.clearDisplay();
-            display.setCursor(0, 0);
+            display.setCursor(0, 25);
             display.display();
 
             while (LoRa.available()) {
